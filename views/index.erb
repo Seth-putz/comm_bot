@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Comm Bot</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    /* Card entrance animation */
+    .card-enter {
+      opacity: 0;
+      transform: translateY(8px);
+      animation: enter 0.3s ease-out forwards;
+    }
+
+    @keyframes enter {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Recommended subtle emphasis */
+    .recommended-card {
+      box-shadow: 0 0 0 1px rgba(34,197,94,0.35);
+    }
+
+    /* NEW: stronger card presence */
+    .response-card {
+      padding: 1rem;
+    }
+
+    /* NEW: full-width (odd) card emphasis */
+    .full-width-emphasis {
+      background: linear-gradient(
+        to right,
+        rgba(59,130,246,0.06),
+        rgba(59,130,246,0.02)
+      );
+      border-left: 4px solid rgba(59,130,246,0.45);
+    }
+  </style>
+</head>
+
+<body class="bg-slate-100 min-h-screen flex items-center justify-center">
+
+<div class="w-full max-w-4xl p-6">
+<div class="bg-white rounded-xl shadow-lg p-8 space-y-6">
+
+  <!-- HEADER -->
+  <header class="space-y-1">
+    <h1 class="text-2xl font-semibold text-slate-800">
+      Workplace Message Assistant
+    </h1>
+    <p class="text-slate-500 text-sm">
+      Improve tone, clarity, and confidence before sending messages at work.
+    </p>
+  </header>
+
+  <!-- MODE SWITCH -->
+  <div class="space-y-1">
+    <div class="flex space-x-2 bg-slate-100 p-1 rounded-lg w-fit">
+
+      <button
+        onclick="setMode('refine')"
+        class="px-4 py-2 text-sm rounded-md bg-white shadow text-slate-800 font-medium"
+      >
+        Refine Message
+      </button>
+
+      <button
+        onclick="setMode('reply')"
+        class="px-4 py-2 text-sm rounded-md text-slate-600 hover:text-slate-800"
+      >
+        Response Helper
+      </button>
+
+    </div>
+
+    <p id="mode_description" class="text-sm text-slate-500">
+      Analyze and improve a message you’ve already written.
+    </p>
+  </div>
+
+  <!-- INPUTS -->
+  <div id="refine_input" class="space-y-2">
+    <label class="block text-sm font-medium text-slate-700">
+      Message you want to send
+    </label>
+    <textarea
+      id="message"
+      rows="4"
+      class="w-full rounded-lg border border-slate-300 p-3"
+    ></textarea>
+  </div>
+
+  <div id="reply_inputs" class="space-y-3 hidden">
+    <!-- ADDED: helper text for response helper -->
+    <div class="text-xs text-slate-500">
+      Tip: You can copy/paste any relevant context here (previous messages, requirements, or what they said) so the assistant preserves it.
+    </div>
+
+    <textarea
+      id="context_message"
+      rows="3"
+      class="w-full rounded-lg border p-3"
+      placeholder="What the other person said"
+    ></textarea>
+
+    <textarea
+      id="user_feelings"
+      rows="3"
+      class="w-full rounded-lg border p-3"
+      placeholder="What you're feeling or trying to say"
+    ></textarea>
+  </div>
+
+  <!-- ROLE + TONE -->
+  <div class="grid grid-cols-2 gap-4">
+    <!-- ADDED: label above recipient role -->
+    <div class="space-y-1">
+      <label class="block text-xs font-medium text-slate-600">
+        Recipient role
+      </label>
+      <select id="recipient_role" class="w-full rounded-lg border p-2">
+        <option>Boss / Manager</option>
+        <option>Senior coworker</option>
+        <option selected>Normal</option>
+        <option>Coworker</option>
+        <option>Client / External</option>
+      </select>
+    </div>
+
+    <!-- ADDED: label above tone -->
+    <div class="space-y-1">
+      <label class="block text-xs font-medium text-slate-600">
+        Tone preference
+      </label>
+      <select id="tone" class="w-full rounded-lg border p-2">
+        <option>Cautious</option>
+        <option>Respectful</option>
+        <option selected>Normal</option>
+        <option>Confident</option>
+        <option>Firm</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- RUN BUTTON -->
+  <button
+    id="run_button"
+    onclick="analyze()"
+    class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg flex items-center justify-center gap-2 disabled:opacity-60"
+  >
+    <span id="run_text">Run Assistant</span>
+    <svg
+      id="spinner"
+      class="hidden w-5 h-5 animate-spin"
+      viewBox="0 0 24 24"
+    >
+      <circle
+        cx="12"
+        cy="12"
+        r="10"
+        class="opacity-25"
+        stroke="white"
+        stroke-width="4"
+        fill="none"
+      ></circle>
+      <path
+        d="M22 12a10 10 0 0 1-10 10"
+        class="opacity-75"
+        fill="white"
+      ></path>
+    </svg>
+  </button>
+
+  <!-- CONFIDENCE -->
+  <div id="confidence_container" class="hidden space-y-1">
+    <div class="text-sm text-slate-600">Perceived confidence</div>
+    <div class="w-full h-2 bg-slate-200 rounded-full">
+      <div id="confidence_fill" class="h-full bg-green-500 rounded-full"></div>
+    </div>
+    <div
+      id="confidence_label"
+      class="text-xs text-slate-600 font-medium"
+    ></div>
+  </div>
+
+  <!-- RESPONSES -->
+  <section class="space-y-2">
+    <h2 class="text-sm font-medium text-slate-700">
+      Suggested responses
+    </h2>
+
+    <div
+      id="responses"
+      class="grid grid-cols-1 md:grid-cols-2 gap-3"
+    ></div>
+  </section>
+
+</div>
+</div>
+
+<script>
+let currentMode = 'refine';
+
+const modeState = {
+  refine: { html: '', confidence: '' },
+  reply: { html: '', confidence: '' }
+};
+
+function setMode(mode) {
+  modeState[currentMode].html = responses.innerHTML;
+  modeState[currentMode].confidence = confidence_container.innerHTML;
+  confidence_container.classList.add('hidden');
+
+  currentMode = mode;
+  refine_input.classList.toggle('hidden', mode !== 'refine');
+  reply_inputs.classList.toggle('hidden', mode !== 'reply');
+
+  responses.innerHTML = modeState[mode].html || '';
+  if (modeState[mode].confidence) {
+    confidence_container.innerHTML = modeState[mode].confidence;
+    confidence_container.classList.remove('hidden');
+  }
+}
+
+function analyze() {
+  const button = run_button;
+  button.disabled = true;
+  spinner.classList.remove('hidden');
+  run_text.textContent = 'Running…';
+
+  fetch(currentMode === 'refine' ? '/analyze' : '/assist', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    body: new URLSearchParams(
+      currentMode === 'refine'
+        ? {
+            message: message.value,
+            recipient_role: recipient_role.value,
+            tone: tone.value
+          }
+        : {
+            context_message: context_message.value,
+            user_feelings: user_feelings.value,
+            recipient_role: recipient_role.value,
+            tone: tone.value
+          }
+    )
+  })
+  .then(r => r.json())
+  .then(renderResponse)
+  .finally(() => {
+    button.disabled = false;
+    spinner.classList.add('hidden');
+    run_text.textContent = 'Run Assistant';
+  });
+}
+
+function renderResponse(data) {
+  responses.innerHTML = '';
+
+  data.responses.forEach((r, i) => {
+    const detected = [...r.text.matchAll(/\[(.*?)\]/g)].map(m => m[1]);
+    const isRecommended = r.label === data.recommended;
+
+    let rendered = r.text;
+    detected.forEach(p => {
+      rendered = rendered.replace(
+        `[${p}]`,
+        `<span class="bg-yellow-200 border border-yellow-500 text-yellow-900 px-1.5 py-0.5 rounded font-semibold">
+          [${p}]
+        </span>`
+      );
+    });
+
+    const isLastOdd =
+      data.responses.length % 2 === 1 &&
+      i === data.responses.length - 1;
+
+    const card = document.createElement('div');
+    card.className = `
+      border rounded-lg bg-slate-50 space-y-3 card-enter response-card
+      ${isRecommended ? 'recommended-card' : ''}
+      ${isLastOdd ? 'md:col-span-2 full-width-emphasis' : ''}
+    `;
+
+    card.innerHTML = `
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <div class="font-semibold text-sm text-slate-800">
+            ${r.label}
+          </div>
+          ${isRecommended ? `
+            <span class="text-xs px-2 py-0.5 rounded-full
+              bg-green-100 text-green-700 border border-green-300">
+              Recommended
+            </span>
+          ` : ''}
+        </div>
+
+        <button
+          class="copy-btn text-xs px-3 py-1.5 rounded bg-slate-800 text-white shadow-sm"
+          onclick="copyMessage(this, \`${r.text.replace(/`/g,'')}\`)">
+          ${detected.length ? 'Copy cleaned' : 'Copy'}
+        </button>
+      </div>
+
+      <div class="text-slate-800 text-[15px] leading-relaxed">
+        ${rendered}
+      </div>
+
+      ${detected.length ? `
+        <div class="space-y-1">
+          ${detected.map(p => `
+            <input
+              data-placeholder="${p}"
+              class="w-full border rounded p-2 text-xs"
+              placeholder="Fill ${p}">
+          `).join('')}
+        </div>` : ''}
+
+      <!-- EXPLANATION -->
+      <div class="text-xs text-slate-600 bg-white rounded border p-2">
+        <strong class="text-slate-700">Why this works:</strong>
+        ${
+          typeof r.explanation === 'string' && r.explanation.trim().length
+            ? r.explanation
+            : 'This version balances clarity and professionalism.'
+        }
+      </div>
+
+      ${r.risk_note ? `
+        <div class="text-xs text-amber-700 bg-amber-50 rounded border border-amber-200 p-2">
+          <strong>Watch out:</strong>
+          ${r.risk_note}
+        </div>
+      ` : ''}
+    `;
+
+    responses.appendChild(card);
+  });
+
+  confidence_container.classList.remove('hidden');
+  confidence_fill.style.width = data.confidence_meter + '%';
+  confidence_label.textContent =
+    `${data.confidence_meter}% confidence · Recommended response highlighted`;
+}
+
+function copyMessage(button, text) {
+  let final = text;
+  const card = button.closest('.card-enter');
+
+  card.querySelectorAll('input[data-placeholder]').forEach(input => {
+    final = final.replace(
+      `[${input.dataset.placeholder}]`,
+      input.value || input.dataset.placeholder
+    );
+  });
+
+  navigator.clipboard.writeText(final);
+
+  const original = button.textContent;
+  button.textContent = 'Copied ✓';
+  button.classList.add('bg-green-600');
+
+  setTimeout(() => {
+    button.textContent = original;
+    button.classList.remove('bg-green-600');
+  }, 1000);
+}
+</script>
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
